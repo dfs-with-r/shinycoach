@@ -18,38 +18,53 @@ ui <- fluidPage(
   titlePanel("Coach | DFS Lineup Optimizer"),
   
   # Sidebar layout with sidebar and main panels
-  sidebarLayout(
-    sidebarPanel(
-      # Panel: Number of lineups
-      wellPanel(
-        # Input: Number of lineups
-        sliderInput("numLineups", "Num of Lineups:", 1, 5, 3, step = 1, round = TRUE)
-      ),
-      
-      # Panel: Stacking
-      wellPanel(
-        # Input: Stack Sizes
-        sliderInput("stackSize1", "Stack Size 1:", 1, 5, 1, step = 1, round = TRUE),
-        sliderInput("stackSize2", "Stack Size 2:", 1, 5, 1, step = 1, round = TRUE)
-      ),
-      
-      # Panel: Exposure Summary
-      wellPanel(
-        # Output: Player Exposure
-        h4("Exposure"),
-        DT::dataTableOutput("exposureTable")
+  tabsetPanel(
+    tabPanel(
+      "Import",
+      sidebarLayout(
+        sidebarPanel(
+          radioButtons("siteChoices", "Site:", c("Draftkings", "Fanduel")),
+          radioButtons("sportChoices", "Sport:", toupper(c("nba", "nfl", "mlb", "nhl"))),
+          fileInput("filePicker", NULL, multiple = FALSE)
+        ),
+        
+        mainPanel(
+          # Player Pool Output
+          h3("Player Pool"),
+          DT::dataTableOutput("poolTable")
+        )
       )
     ),
-    
-    mainPanel(
-      # Player Pool Output
-      h3("Player Pool"),
-      DT::dataTableOutput("poolTable"),
-      # Lineups Output
-      h3("Lineups"),
-      DT::dataTableOutput("lineupsTable")
+    tabPanel(
+      "Optimize",
+      sidebarLayout(
+        sidebarPanel(
+          # Panel: Number of lineups
+          wellPanel(
+            # Input: Number of lineups
+            sliderInput("numLineups", "Num of Lineups:", 1, 5, 3, step = 1, round = TRUE)
+          ),
+          
+          # Panel: Stacking
+          wellPanel(
+            # Input: Stack Sizes
+            sliderInput("stackSize1", "Stack Size 1:", 1, 4, 1, step = 1, round = TRUE),
+            sliderInput("stackSize2", "Stack Size 2:", 1, 4, 1, step = 1, round = TRUE)
+          )
+        ),
+        
+        mainPanel(
+          # Lineups Output
+          h3("Lineups"),
+          DT::dataTableOutput("lineupsTable"),
+          # Output: Player Exposure
+          h4("Exposure"),
+          DT::dataTableOutput("exposureTable")
+        )
+      )
     )
   )
+  
 )
 
 # Define server logic
