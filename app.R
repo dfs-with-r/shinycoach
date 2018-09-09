@@ -3,15 +3,6 @@ library(readr)
 library(dplyr)
 library(coach)
 
-# Read data
-pool <- coach::read_dk_nfl("../coach/tests/testthat/data/dk-nfl.csv")
-
-# Add random projections
-pool$fpts_proj <- rnorm(nrow(pool), pool$fpts_avg, 4)
-
-# Build Model
-model <- coach::model_dk_nfl(pool)
-
 # Define UI for application 
 ui <- fluidPage(
   # Application title
@@ -58,8 +49,8 @@ ui <- fluidPage(
           h3("Lineups"),
           DT::dataTableOutput("lineupsTable"),
           # Output: Player Exposure
-          h4("Exposure"),
-          DT::dataTableOutput("exposureTable")
+          h3("Exposure"),
+          DT::dataTableOutput("exposureTable", width = "50%")
         )
       )
     )
@@ -70,10 +61,71 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
   # Reactives
+  file_reader <- reactive({
+    sport <- input$sportChoices
+    site <- input$siteChoices
+    
+    if (site == "Fanduel") {
+      cat("fanudel")
+      coach::read_fd
+    } else if (site == "Draftkings") {
+      if (sport == "NFL") coach::read_dk_nfl
+      else if (sport == "MLB") coach::read_dk_mlb
+      else NULL
+    }
+  })
+  
+  pool <- reactive({
+    req(input$filePicker, file_reader)
+    
+    # Get file
+    file_meta <- input$filePicker
+    
+    # Get reader
+    reader <- file_reader()
+    cat("gogo\n")
+    print(reader)
+    
+    # Read data
+    #df <- coach::read_dk_nfl("../coach/tests/testthat/data/dk-nfl.csv")
+    df <- reader(file_meta$datapath)
+    
+    # Add random projections
+    df$fpts_proj <- rnorm(nrow(df), df$fpts_avg, 4)
+    df
+  })
+  
+  model_maker <- reactive({
+    sport <- input$sportChoices
+    site <- input$siteChoices
+    
+    if (site == "Fanduel") {
+      NULL
+    } else if (site == "Draftkings") {
+      if (sport == "NFL") coach::model_dk_nfl
+      else if (sport == "MLB") coach::model_dk_mlb
+      else NULL
+    }
+  })
+  
+  model <- reactive({
+    # Build Model
+    p <- pool()
+    m <- model_maker()
+    m(p)
+  })
+  
   results <- reactive({
-    req(input$numLineups)
-    optimize_generic(pool, model, L = input$numLineups, 
+    req(input$numLineups, pool, model)
+    optimize_generic(pool(), model(), L = input$numLineups, 
                      stack_sizes = c(input$stackSize1, input$stackSize2))
+  })
+  
+  pos_levels <- reactive({
+    switch(input$sportChoices,
+           "NFL" = c("QB", "RB", "WR", "TE", "DST"),
+           "MLB" = c("P", "C", "1B", "2B", "3B", "SS", "OF"),
+           "NBA" = c("PG", "SG", "SF", "PF", "C"))
   })
   
   lineups <- reactive({
@@ -82,7 +134,7 @@ server <- function(input, output) {
       select(lineup, player_id, player, team, opp_team, position, salary, fpts_proj)
     
     # order lineups by position
-    pos2 <- factor(df[["position"]], levels = c("QB", "RB", "WR", "TE", "DST"))
+    pos2 <- factor(df[["position"]], levels = pos_levels())
     new_order <- order(df[["lineup"]], pos2, -df[["salary"]], df[["player"]]) 
     df[new_order,]
   })
@@ -95,10 +147,11 @@ server <- function(input, output) {
   
   # Player Pool Output
   output$poolTable <- DT::renderDataTable({
-    pool_slim <- pool[c("player_id", "player", "team", "opp_team", "position", "salary", "fpts_proj")]
+    p <- pool()
+    pool_slim <- p[c("player_id", "player", "team", "opp_team", "position", "salary", "fpts_proj")]
     pool_slim <- pool_slim[order(-pool_slim[["fpts_proj"]]),]
     
-    DT::datatable(pool_slim, options = list(pageLength = 5)) %>% 
+    DT::datatable(pool_slim, options = list(pageLength = 15)) %>% 
       DT::formatRound("fpts_proj", 2)
   })
   
