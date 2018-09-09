@@ -90,7 +90,6 @@ server <- function(input, output) {
     site <- input$siteChoices
     
     if (site == "Fanduel") {
-      cat("fanudel")
       coach::read_fd
     } else if (site == "Draftkings") {
       if (sport == "NFL") coach::read_dk_nfl
@@ -107,11 +106,8 @@ server <- function(input, output) {
     
     # Get reader
     reader <- file_reader()
-    cat("gogo\n")
-    print(reader)
     
     # Read data
-    #df <- coach::read_dk_nfl("../coach/tests/testthat/data/dk-nfl.csv")
     df <- reader(file_meta$datapath)
     
     # Add random projections
@@ -124,10 +120,15 @@ server <- function(input, output) {
     site <- input$siteChoices
     
     if (site == "Fanduel") {
-      NULL
+      if (sport == "NFL") coach::model_fd_nfl
+      else if (sport == "MLB") coach::model_fd_mlb
+      else if (sport == "NBA") coach::model_fd_nba
+      else if (sport == "NHL") coach::model_fd_nhl
+      else NULL
     } else if (site == "Draftkings") {
       if (sport == "NFL") coach::model_dk_nfl
       else if (sport == "MLB") coach::model_dk_mlb
+      else if (sport == "NBA") coach::model_dk_nba
       else NULL
     }
   })
@@ -149,7 +150,9 @@ server <- function(input, output) {
     switch(input$sportChoices,
            "NFL" = c("QB", "RB", "WR", "TE", "DST"),
            "MLB" = c("P", "C", "1B", "2B", "3B", "SS", "OF"),
-           "NBA" = c("PG", "SG", "SF", "PF", "C"))
+           "NBA" = c("PG", "SG", "SF", "PF", "C"),
+           "NHL" = c("G", "C", "W", "D")
+           )
   })
   
   lineups <- reactive({
