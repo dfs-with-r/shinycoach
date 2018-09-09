@@ -64,6 +64,10 @@ server <- function(input, output) {
     lineups <- dplyr::bind_rows(results, .id = "lineup") %>% 
       select(lineup, player_id, player, team, opp_team, position, salary, fpts_proj)
     
+    # order lineups by position
+    pos2 <- factor(lineups[["position"]], levels = c("QB", "RB", "WR", "TE", "DST"))
+    lineups <- lineups[order(lineups[["lineup"]], pos2, -lineups[["salary"]], lineups[["player"]]),]
+    
     # render lineups
     DT::datatable(lineups, 
                   options = list(pageLength = n, lengthChange = FALSE, searching = FALSE),
