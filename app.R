@@ -23,21 +23,30 @@ ui <- fluidPage(
       # Panel: Number of lineups
       wellPanel(
         # Input: Number of lineups
-        sliderInput("numLineups", "Num of Lineups:", 1, 10, 3, step = 1, round = TRUE)
+        sliderInput("numLineups", "Num of Lineups:", 1, 5, 3, step = 1, round = TRUE)
       ),
       
       # Panel: Stacking
       wellPanel(
         # Input: Stack Sizes
-        sliderInput("stackSize1", "Stack Size 1:", 1, 5, 3, step = 1, round = TRUE),
-        sliderInput("stackSize2", "Stack Size 2:", 1, 5, 2, step = 1, round = TRUE)
+        sliderInput("stackSize1", "Stack Size 1:", 1, 5, 1, step = 1, round = TRUE),
+        sliderInput("stackSize2", "Stack Size 2:", 1, 5, 1, step = 1, round = TRUE)
+      ),
+      
+      # Panel: Exposure Summary
+      wellPanel(
+        # Output: Player Exposure
+        h4("Exposure"),
+        DT::dataTableOutput("exposureTable")
       )
     ),
     
     mainPanel(
       # Player Pool Output
+      h3("Player Pool"),
       DT::dataTableOutput("poolTable"),
       # Lineups Output
+      h3("Lineups"),
       DT::dataTableOutput("lineupsTable")
     )
   )
@@ -48,7 +57,8 @@ server <- function(input, output) {
   # Reactives
   results <- reactive({
     req(input$numLineups)
-    optimize_generic(pool, model, L = input$numLineups)
+    optimize_generic(pool, model, L = input$numLineups, 
+                     stack_sizes = c(input$stackSize1, input$stackSize2))
   })
   
   lineups <- reactive({
@@ -87,6 +97,24 @@ server <- function(input, output) {
       DT::formatRound("fpts_proj", 2)
   })
   
+  # Exposure Output
+  output$exposureTable <- DT::renderDataTable({
+    tbl <- lineups()
+    nlineups <- tbl %>% distinct(lineup) %>% nrow()
+    
+    exposure <- tbl %>% 
+      count(player_id, player, team, position) %>% 
+      mutate(own = n/nlineups) %>% 
+      select(player, team, position, own) %>% 
+      arrange(desc(own), team, player)
+    
+    DT::datatable(
+      exposure,
+      options = list(pageLength = 10, lengthChange = FALSE, searching = FALSE),
+      rownames = FALSE
+      ) %>% 
+      DT::formatPercentage("own", 0)
+  })
 }
 
 # Run the application 
