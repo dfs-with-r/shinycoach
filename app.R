@@ -1,10 +1,14 @@
 library(shiny)
+library(shinythemes)
 library(readr)
 library(dplyr)
 library(coach)
 
 # Define UI for application 
 ui <- fluidPage(
+  # Theme
+  theme = shinythemes::shinytheme("cosmo"),
+  
   # Application title
   titlePanel("Coach | DFS Lineup Optimizer"),
   
@@ -14,9 +18,29 @@ ui <- fluidPage(
       "Import",
       sidebarLayout(
         sidebarPanel(
-          radioButtons("siteChoices", "Site:", c("Draftkings", "Fanduel")),
-          radioButtons("sportChoices", "Sport:", toupper(c("nba", "nfl", "mlb", "nhl"))),
-          fileInput("filePicker", NULL, multiple = FALSE)
+          
+          # Panel: Download Template
+          wellPanel(
+            h4("1. Download Template"),
+            p("Fill in the template with player info and projections."),
+            downloadButton("downloadTemplate") 
+          ),
+          
+          # Panel: Upload Data
+          wellPanel(
+            h4("2. Upload Data"),
+            p("Select a file from your computer to upload"),
+            fileInput("filePicker", NULL, multiple = FALSE)
+          ),
+          
+          # Panel: Select Model
+          wellPanel(
+            h4("3. Select Model"),
+            p(" Select the type of optimization model to build. This defines the
+              available positions, salary cap, and any other constraints."),
+            radioButtons("siteChoices", "Site:", c("Draftkings", "Fanduel")),
+            radioButtons("sportChoices", "Sport:", c("NBA", "NFL", "MLB", "NHL"))
+          )
         ),
         
         mainPanel(
@@ -183,6 +207,15 @@ server <- function(input, output) {
       ) %>% 
       DT::formatPercentage("own", 0)
   })
+  
+  # download template
+  output$downloadTemplate <- downloadHandler(
+    filename = function() {"coach-template.csv"},
+    content = function(file) {
+      file.copy("coach-template.csv", file)
+    },
+    contentType = "text/csv"
+  )
 }
 
 # Run the application 
