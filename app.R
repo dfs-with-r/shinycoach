@@ -45,6 +45,28 @@ ui <- fluidPage(
 
 # Define server logic
 server <- function(input, output) {
+  # Reactives
+  results <- reactive({
+    req(input$numLineups)
+    optimize_generic(pool, model, L = input$numLineups)
+  })
+  
+  lineups <- reactive({
+    r <- results()
+    df <- dplyr::bind_rows(r, .id = "lineup") %>% 
+      select(lineup, player_id, player, team, opp_team, position, salary, fpts_proj)
+    
+    # order lineups by position
+    pos2 <- factor(df[["position"]], levels = c("QB", "RB", "WR", "TE", "DST"))
+    new_order <- order(df[["lineup"]], pos2, -df[["salary"]], df[["player"]]) 
+    df[new_order,]
+  })
+  
+  lineup_size <- reactive({
+    r <- results()
+    nrow(r[[1]])
+  })
+  
   
   # Player Pool Output
   output$poolTable <- DT::renderDataTable({
@@ -57,23 +79,14 @@ server <- function(input, output) {
   
   # Lineups Output
   output$lineupsTable <- DT::renderDataTable({
-    results <- optimize_generic(pool, model, L = input$numLineups)
-    
-    # combine results
-    n <- nrow(results[[1]])
-    lineups <- dplyr::bind_rows(results, .id = "lineup") %>% 
-      select(lineup, player_id, player, team, opp_team, position, salary, fpts_proj)
-    
-    # order lineups by position
-    pos2 <- factor(lineups[["position"]], levels = c("QB", "RB", "WR", "TE", "DST"))
-    lineups <- lineups[order(lineups[["lineup"]], pos2, -lineups[["salary"]], lineups[["player"]]),]
-    
-    # render lineups
-    DT::datatable(lineups, 
-                  options = list(pageLength = n, lengthChange = FALSE, searching = FALSE),
-                  rownames = FALSE) %>% 
+    DT::datatable(
+      lineups(), 
+      options = list(pageLength = lineup_size(), lengthChange = FALSE, searching = FALSE),
+      rownames = FALSE
+      ) %>% 
       DT::formatRound("fpts_proj", 2)
   })
+  
 }
 
 # Run the application 
