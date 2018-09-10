@@ -19,27 +19,34 @@ ui <- fluidPage(
       sidebarLayout(
         sidebarPanel(
           
+          # Panel: Upload Site Player Pool
+          wellPanel(
+            h4("1. Upload Player Pool"),
+            radioButtons("siteChoices", "Site:", c("Fanduel", "Draftkings")),
+            p("Export a player pool to your computer and upload it here:"),
+            fileInput("poolFilePicker", NULL, multiple = FALSE)
+          ),
+          
           # Panel: Download Template
           wellPanel(
-            h4("1. Download Template"),
-            p("Fill in the template with player info and projections."),
+            h4("2. Download Template"),
+            p("Download the template and fill in the `fpts_proj` column with your projections."),
             downloadButton("downloadTemplate") 
           ),
           
           # Panel: Upload Data
           wellPanel(
-            h4("2. Upload Data"),
-            p("Select a file from your computer to upload"),
-            fileInput("filePicker", NULL, multiple = FALSE)
+            h4("3. Upload Pool with Projections"),
+            p("Upload the new file with the projections in them."),
+            fileInput("projFilePicker", NULL, multiple = FALSE)
           ),
           
           # Panel: Select Model
           wellPanel(
-            h4("3. Select Model"),
+            h4("4. Select Sport"),
             p(" Select the type of optimization model to build. This defines the
               available positions, salary cap, and any other constraints."),
-            radioButtons("siteChoices", "Site:", c("Draftkings", "Fanduel")),
-            radioButtons("sportChoices", "Sport:", c("NBA", "NFL", "MLB", "NHL"))
+            radioButtons("sportChoices", "Sport:", c("NFL", "NBA", "MLB", "NHL"))
           )
         ),
         
@@ -86,23 +93,19 @@ ui <- fluidPage(
 server <- function(input, output) {
   # Reactives
   file_reader <- reactive({
-    sport <- input$sportChoices
+    cat("file_reader\n")
     site <- input$siteChoices
     
-    if (site == "Fanduel") {
-      coach::read_fd
-    } else if (site == "Draftkings") {
-      if (sport == "NFL") coach::read_dk_nfl
-      else if (sport == "MLB") coach::read_dk_mlb
-      else NULL
-    }
+    if (site == "Fanduel") coach::read_fd
+    else if (site == "Draftkings") coach::read_dk
   })
   
   pool <- reactive({
-    req(input$filePicker, file_reader)
+    req(input$poolFilePicker, file_reader)
+    cat("pool\n")
     
     # Get file
-    file_meta <- input$filePicker
+    file_meta <- input$poolFilePicker
     
     # Get reader
     reader <- file_reader()
@@ -116,6 +119,8 @@ server <- function(input, output) {
   })
   
   model_maker <- reactive({
+    #req(input$projFilePicker)
+    cat("model_maker\n")
     sport <- input$sportChoices
     site <- input$siteChoices
     
@@ -134,6 +139,8 @@ server <- function(input, output) {
   })
   
   model <- reactive({
+    req(pool, model_maker)#, input$projFilePicker)
+    cat("model\n")
     # Build Model
     p <- pool()
     m <- model_maker()
@@ -142,11 +149,13 @@ server <- function(input, output) {
   
   results <- reactive({
     req(input$numLineups, pool, model)
+    cat("results\n")
     optimize_generic(pool(), model(), L = input$numLineups, 
                      stack_sizes = c(input$stackSize1, input$stackSize2))
   })
   
   pos_levels <- reactive({
+    cat("pos_levels\n")
     switch(input$sportChoices,
            "NFL" = c("QB", "RB", "WR", "TE", "DST"),
            "MLB" = c("P", "C", "1B", "2B", "3B", "SS", "OF"),
@@ -156,6 +165,7 @@ server <- function(input, output) {
   })
   
   lineups <- reactive({
+    cat("lineups\n")
     r <- results()
     df <- dplyr::bind_rows(r, .id = "lineup") %>% 
       select(lineup, player_id, player, team, opp_team, position, salary, fpts_proj)
@@ -167,6 +177,7 @@ server <- function(input, output) {
   })
   
   lineup_size <- reactive({
+    cat("lineup_size\n")
     r <- results()
     nrow(r[[1]])
   })
@@ -175,6 +186,12 @@ server <- function(input, output) {
   # Player Pool Output
   output$poolTable <- DT::renderDataTable({
     p <- pool()
+    
+    # check if fpts_proj exists
+    if (!("fpts_proj" %in% colnames(p))) {
+      p[["fpts_proj"]] <- NA_real_
+    }
+    
     pool_slim <- p[c("player_id", "player", "team", "opp_team", "position", "salary", "fpts_proj")]
     pool_slim <- pool_slim[order(-pool_slim[["fpts_proj"]]),]
     
@@ -215,7 +232,18 @@ server <- function(input, output) {
   output$downloadTemplate <- downloadHandler(
     filename = function() {"coach-template.csv"},
     content = function(file) {
-      file.copy("coach-template.csv", file)
+      cat(file, "\n")
+      #file.copy("data/coach-template.csv", file)
+      p <- pool()
+      # check if fpts_proj exists
+      if (!("fpts_proj" %in% colnames(p))) {
+        p[["fpts_proj"]] <- NA_real_
+      }
+      
+      pool_slim <- p[c("player_id", "player", "team", "opp_team", "position", "salary", "fpts_proj")]
+      pool_slim <- pool_slim[order(-pool_slim[["fpts_proj"]]),]
+      
+      readr::write_csv(pool_slim, file)
     },
     contentType = "text/csv"
   )
