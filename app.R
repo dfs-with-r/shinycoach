@@ -15,41 +15,26 @@ ui <- fluidPage(
   # Sidebar layout with sidebar and main panels
   tabsetPanel(
     tabPanel(
-      "Import",
+      "Import Data",
       sidebarLayout(
         sidebarPanel(
           
-          # Panel: Upload Site Player Pool
+          # Panel: Define Model Type
           wellPanel(
-            h4("1. Upload Player Pool"),
-            radioButtons("siteChoices", "Site:", c("Fanduel", "Draftkings")),
-            p("Export a player pool to your computer and upload it here:"),
-            fileInput("poolFilePicker", NULL, multiple = FALSE)
-          ),
-          
-          # Panel: Download Template
-          wellPanel(
-            h4("2. Download Template"),
-            p("Download the template and fill in the `fpts_proj` column with your projections."),
-            downloadButton("downloadTemplate") 
-          ),
-          
-          # Panel: Upload Data
-          wellPanel(
-            h4("3. Upload Pool with Projections"),
-            p("Upload the new file with the projections in them."),
-            fileInput("projFilePicker", NULL, multiple = FALSE)
-          ),
-          
-          # Panel: Select Model
-          wellPanel(
-            h4("4. Select Sport"),
+            h4("1. Select Model"),
             p(" Select the type of optimization model to build. This defines the
               available positions, salary cap, and any other constraints."),
+            radioButtons("siteChoices", "Site:", c("Fanduel", "Draftkings")),
             radioButtons("sportChoices", "Sport:", c("NFL", "NBA", "MLB", "NHL"))
+          ),
+          
+          # Panel: Upload Site Player Pool
+          wellPanel(
+            h4("2. Upload Player Pool"),
+            p("Export a player pool to your computer and upload it here:"),
+            fileInput("poolFilePicker", NULL, multiple = FALSE)
           )
         ),
-        
         mainPanel(
           # Player Pool Output
           h3("Player Pool"),
@@ -84,6 +69,17 @@ ui <- fluidPage(
           DT::dataTableOutput("exposureTable", width = "50%")
         )
       )
+    ),
+    
+    tabPanel(
+      "Export Lineups",
+      
+      # Panel: Download Lineups
+      wellPanel(
+        h4("4. Download Lineups"),
+        p("Download the lineups to a file ready to be uploaded to the DFS site."),
+        downloadButton("downloadLineups") 
+      )
     )
   )
   
@@ -91,7 +87,19 @@ ui <- fluidPage(
 
 # Define server logic
 server <- function(input, output) {
-  # Reactives
+  
+  # position orders
+  pos_levels <- reactive({
+    cat("pos_levels\n")
+    switch(input$sportChoices,
+           "NFL" = c("QB", "RB", "WR", "TE", "DST"),
+           "MLB" = c("P", "C", "1B", "2B", "3B", "SS", "OF"),
+           "NBA" = c("PG", "SG", "SF", "PF", "C"),
+           "NHL" = c("G", "C", "W", "D")
+    )
+  })
+  
+  # choose file reader
   file_reader <- reactive({
     cat("file_reader\n")
     site <- input$siteChoices
@@ -100,6 +108,7 @@ server <- function(input, output) {
     else if (site == "Draftkings") coach::read_dk
   })
   
+  # player pool
   pool <- reactive({
     req(input$poolFilePicker, file_reader)
     cat("pool\n")
@@ -118,8 +127,9 @@ server <- function(input, output) {
     df
   })
   
+  # choose model
   model_maker <- reactive({
-    #req(input$projFilePicker)
+    req(input$poolFilePicker)
     cat("model_maker\n")
     sport <- input$sportChoices
     site <- input$siteChoices
@@ -138,15 +148,17 @@ server <- function(input, output) {
     }
   })
   
+  # build model
   model <- reactive({
-    req(pool, model_maker)#, input$projFilePicker)
+    req(pool, model_maker)
     cat("model\n")
-    # Build Model
+
     p <- pool()
     m <- model_maker()
     m(p)
   })
   
+  # optimization results
   results <- reactive({
     req(input$numLineups, pool, model)
     cat("results\n")
@@ -154,16 +166,7 @@ server <- function(input, output) {
                      stack_sizes = c(input$stackSize1, input$stackSize2))
   })
   
-  pos_levels <- reactive({
-    cat("pos_levels\n")
-    switch(input$sportChoices,
-           "NFL" = c("QB", "RB", "WR", "TE", "DST"),
-           "MLB" = c("P", "C", "1B", "2B", "3B", "SS", "OF"),
-           "NBA" = c("PG", "SG", "SF", "PF", "C"),
-           "NHL" = c("G", "C", "W", "D")
-           )
-  })
-  
+  # combined lineups
   lineups <- reactive({
     cat("lineups\n")
     r <- results()
@@ -186,12 +189,6 @@ server <- function(input, output) {
   # Player Pool Output
   output$poolTable <- DT::renderDataTable({
     p <- pool()
-    
-    # check if fpts_proj exists
-    if (!("fpts_proj" %in% colnames(p))) {
-      p[["fpts_proj"]] <- NA_real_
-    }
-    
     pool_slim <- p[c("player_id", "player", "team", "opp_team", "position", "salary", "fpts_proj")]
     pool_slim <- pool_slim[order(-pool_slim[["fpts_proj"]]),]
     
@@ -228,20 +225,13 @@ server <- function(input, output) {
       DT::formatPercentage("own", 0)
   })
   
-  # download template
-  output$downloadTemplate <- downloadHandler(
+  # download lineups
+  output$downloadLineups <- downloadHandler(
     filename = function() {"coach-template.csv"},
     content = function(file) {
       cat(file, "\n")
       #file.copy("data/coach-template.csv", file)
-      p <- pool()
-      # check if fpts_proj exists
-      if (!("fpts_proj" %in% colnames(p))) {
-        p[["fpts_proj"]] <- NA_real_
-      }
-      
-      pool_slim <- p[c("player_id", "player", "team", "opp_team", "position", "salary", "fpts_proj")]
-      pool_slim <- pool_slim[order(-pool_slim[["fpts_proj"]]),]
+      # write_lineups(lineups, input$siteChoices, input$sportChoices)
       
       readr::write_csv(pool_slim, file)
     },
