@@ -8,10 +8,16 @@ library(coach)
 ui <- fluidPage(
   # Theme
   theme = shinythemes::shinytheme("cosmo"),
+  title = "Coach | DFS Lineup Optimizer",
   
   # Application title
-  titlePanel("Coach | DFS Lineup Optimizer"),
-  
+  #titlePanel("Coach | DFS Lineup Optimizer"),
+  fluidRow(
+    column(9, h1("Coach | DFS Lineup Optimizer")),
+    column(3, a(icon("github", "fa-2x"), href = "https://www.github.com/zamorarr/coach"),
+           style = "height:5.3em;padding-top:2em;padding-right:2em;text-align:right;text-align:bottom")
+  ),
+
   # Sidebar layout with sidebar and main panels
   tabsetPanel(
     tabPanel(
