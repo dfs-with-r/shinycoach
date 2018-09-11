@@ -78,16 +78,21 @@ ui <- fluidPage(
     
     tabPanel(
       "Export Lineups",
-      
-      # Panel: Download Lineups
-      wellPanel(
-        h4("4. Download Lineups"),
-        p("Download the lineups to a file ready to be uploaded to the DFS site."),
-        downloadButton("downloadLineups") 
+      sidebarLayout(
+        sidebarPanel(
+          # Panel: Download Lineups
+          wellPanel(
+            h4("4. Download Lineups"),
+            p("Download the lineups to a file ready to be uploaded to the DFS site."),
+            downloadButton("downloadLineups") 
+          )
+        ),
+        mainPanel(
+          DT::dataTableOutput("exportableTable")
+        )
       )
     )
   )
-  
 )
 
 # Define server logic
@@ -181,7 +186,6 @@ server <- function(input, output) {
     nrow(r[[1]])
   })
   
-  
   # Player Pool Output
   output$poolTable <- DT::renderDataTable({
     p <- pool()
@@ -219,6 +223,16 @@ server <- function(input, output) {
       rownames = FALSE
       ) %>% 
       DT::formatPercentage("own", 0)
+  })
+  
+  # Exportable Lineups Output
+  output$exportableTable <- DT::renderDataTable({
+    to_export <- coach::write_lineups(lineups())
+    DT::datatable(
+      to_export, 
+      options = list(pageLength = 20, lengthChange = FALSE, searching = FALSE),
+      rownames = FALSE
+    )
   })
   
   # download lineups
