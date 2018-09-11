@@ -46,6 +46,11 @@ ui <- fluidPage(
       "Optimize",
       sidebarLayout(
         sidebarPanel(
+          
+          h4("3. Optimize Lineups"),
+          p("Choose parameters to build the lineups that optimize total 
+            projected fantasy points while meeting the site and sport constraints."),
+          
           # Panel: Number of lineups
           wellPanel(
             # Input: Number of lineups
