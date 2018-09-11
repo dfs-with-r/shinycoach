@@ -93,17 +93,6 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
   
-  # position orders
-  pos_levels <- reactive({
-    cat("pos_levels\n")
-    switch(input$sportChoices,
-           "NFL" = c("QB", "RB", "WR", "TE", "DST"),
-           "MLB" = c("P", "C", "1B", "2B", "3B", "SS", "OF"),
-           "NBA" = c("PG", "SG", "SF", "PF", "C"),
-           "NHL" = c("G", "C", "W", "D")
-    )
-  })
-  
   # choose file reader
   file_reader <- reactive({
     cat("file_reader\n")
@@ -175,13 +164,15 @@ server <- function(input, output) {
   lineups <- reactive({
     cat("lineups\n")
     r <- results()
+    
+    # normalize lineups
+    r <- lapply(r, coach::normalize_lineup, site = tolower(input$siteChoices), sport = tolower(input$sportChoices))
+    
+    # combine lineups
     df <- dplyr::bind_rows(r, .id = "lineup") %>% 
       select(lineup, player_id, player, team, opp_team, position, salary, fpts_proj)
     
-    # order lineups by position
-    pos2 <- factor(df[["position"]], levels = pos_levels())
-    new_order <- order(df[["lineup"]], pos2, -df[["salary"]], df[["player"]]) 
-    df[new_order,]
+    df
   })
   
   lineup_size <- reactive({
@@ -219,7 +210,7 @@ server <- function(input, output) {
     exposure <- tbl %>% 
       count(player_id, player, team, position) %>% 
       mutate(own = n/nlineups) %>% 
-      select(player, team, position, own) %>% 
+      select(player, team, own) %>% 
       arrange(desc(own), team, player)
     
     DT::datatable(
@@ -232,13 +223,16 @@ server <- function(input, output) {
   
   # download lineups
   output$downloadLineups <- downloadHandler(
-    filename = function() {"coach-template.csv"},
+    filename = function() {
+      site <- tolower(input$siteChoices)
+      sport <- tolower(input$sportChoices)
+      now <- format(Sys.time(), "%Y%m%d-%H%M%S")
+      sprintf("coach-%s-%s-%s.csv", site, sport, now)
+      },
     content = function(file) {
       cat(file, "\n")
       #file.copy("data/coach-template.csv", file)
-      # write_lineups(lineups, input$siteChoices, input$sportChoices)
-      
-      readr::write_csv(pool_slim, file)
+      coach::write_lineups(lineups(), file)
     },
     contentType = "text/csv"
   )
