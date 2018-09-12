@@ -4,50 +4,21 @@ library(readr)
 library(dplyr)
 library(coach)
 
+source("module-title.R")
+source("module-tab-import.R")
+
 # Define UI for application 
 ui <- fluidPage(
   # Theme
   theme = shinythemes::shinytheme("cosmo"),
-  title = "Coach | DFS Lineup Optimizer",
   
-  # Application title
-  #titlePanel("Coach | DFS Lineup Optimizer"),
-  fluidRow(
-    column(9, h1("Coach | DFS Lineup Optimizer")),
-    column(3, a(icon("github", "fa-2x"), href = "https://www.github.com/zamorarr/coach"),
-           style = "height:5.3em;padding-top:2em;padding-right:2em;text-align:right;text-align:bottom")
-  ),
+  # Title Bar
+  titleBarUI("title", "Coach | DFS Lineup Optimizer", 
+             github = "dfs-with-r/coach", email = "robert@dfswithr.com"),
 
   # Sidebar layout with sidebar and main panels
   tabsetPanel(
-    tabPanel(
-      "Import Data",
-      sidebarLayout(
-        sidebarPanel(
-          
-          # Panel: Define Model Type
-          wellPanel(
-            h4("1. Select Model"),
-            p(" Select the type of optimization model to build. This defines the
-              available positions, salary cap, and any other constraints."),
-            radioButtons("siteChoices", "Site:", c("Fanduel", "Draftkings")),
-            radioButtons("sportChoices", "Sport:", c("NFL", "NBA", "MLB", "NHL"))
-          ),
-          
-          # Panel: Upload Site Player Pool
-          wellPanel(
-            h4("2. Upload Player Pool"),
-            p("Export a player pool to your computer and upload it here:"),
-            fileInput("poolFilePicker", NULL, multiple = FALSE)
-          )
-        ),
-        mainPanel(
-          # Player Pool Output
-          h3("Player Pool"),
-          DT::dataTableOutput("poolTable")
-        )
-      )
-    ),
+    tabImportUI("import"),
     tabPanel(
       "Optimize",
       sidebarLayout(
@@ -104,61 +75,10 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
   
-  # choose file reader
-  file_reader <- reactive({
-    site <- input$siteChoices
-    
-    if (site == "Fanduel") coach::read_fd
-    else if (site == "Draftkings") coach::read_dk
-  })
-  
-  # player pool
-  pool <- reactive({
-    req(input$poolFilePicker, file_reader)
-    
-    # Get file
-    file_meta <- input$poolFilePicker
-    
-    # Get reader
-    reader <- file_reader()
-    
-    # Read data
-    df <- reader(file_meta$datapath)
-    
-    # Add random projections
-    #df$fpts_proj <- rnorm(nrow(df), df$fpts_avg, 4)
-    df
-  })
-  
-  # choose model
-  model_maker <- reactive({
-    req(input$poolFilePicker)
-    
-    sport <- input$sportChoices
-    site <- input$siteChoices
-    
-    if (site == "Fanduel") {
-      if (sport == "NFL") coach::model_fd_nfl
-      else if (sport == "MLB") coach::model_fd_mlb
-      else if (sport == "NBA") coach::model_fd_nba
-      else if (sport == "NHL") coach::model_fd_nhl
-      else NULL
-    } else if (site == "Draftkings") {
-      if (sport == "NFL") coach::model_dk_nfl
-      else if (sport == "MLB") coach::model_dk_mlb
-      else if (sport == "NBA") coach::model_dk_nba
-      else NULL
-    }
-  })
-  
-  # build model
-  model <- reactive({
-    req(pool, model_maker)
-
-    p <- pool()
-    m <- model_maker()
-    m(p)
-  })
+  # import module
+  import_reactives <- callModule(tabImport, "import")
+  pool <- import_reactives[["pool"]]
+  model <- import_reactives[["model"]]
   
   # optimization results
   results <- reactive({
@@ -185,16 +105,6 @@ server <- function(input, output) {
   lineup_size <- reactive({
     r <- results()
     nrow(r[[1]])
-  })
-  
-  # Player Pool Output
-  output$poolTable <- DT::renderDataTable({
-    p <- pool()
-    pool_slim <- p[c("player_id", "player", "team", "opp_team", "position", "salary", "fpts_proj")]
-    pool_slim <- pool_slim[order(-pool_slim[["fpts_proj"]]),]
-    
-    DT::datatable(pool_slim, options = list(pageLength = 15)) %>% 
-      DT::formatRound("fpts_proj", 2)
   })
   
   # Lineups Output
