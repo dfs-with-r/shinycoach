@@ -16,7 +16,7 @@ ui <- fluidPage(
   
   # Title Bar
   titleBarUI("title", "Coach | DFS Lineup Optimizer", 
-             github = "dfs-with-r/coach", email = "robert@dfswithr.com"),
+             github = "dfs-with-r/shinycoach", email = "robert@dfswithr.com"),
 
   # Sidebar layout with sidebar and main panels
   tabsetPanel(
