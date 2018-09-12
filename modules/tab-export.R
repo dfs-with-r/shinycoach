@@ -11,7 +11,7 @@ tabExportUI <- function(id) {
         wellPanel(
           h4("4. Download Lineups"),
           p("Download the lineups to a file ready to be uploaded to the DFS site."),
-          downloadButton("downloadLineups") 
+          downloadButton(ns("downloadLineups")) 
         )
       ),
       mainPanel(
