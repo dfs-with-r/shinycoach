@@ -4,10 +4,10 @@ library(readr)
 library(dplyr)
 library(coach)
 
-source("module-title.R")
-source("module-tab-import.R")
-source("module-tab-optimize.R")
-source("module-tab-export.R")
+source("modules/title.R")
+source("modules/tab-import.R")
+source("modules/tab-optimize.R")
+source("modules/tab-export.R")
 
 # Define UI for application 
 ui <- fluidPage(
