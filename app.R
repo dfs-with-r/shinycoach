@@ -106,7 +106,6 @@ server <- function(input, output) {
   
   # choose file reader
   file_reader <- reactive({
-    cat("file_reader\n")
     site <- input$siteChoices
     
     if (site == "Fanduel") coach::read_fd
@@ -116,7 +115,6 @@ server <- function(input, output) {
   # player pool
   pool <- reactive({
     req(input$poolFilePicker, file_reader)
-    cat("pool\n")
     
     # Get file
     file_meta <- input$poolFilePicker
@@ -135,7 +133,7 @@ server <- function(input, output) {
   # choose model
   model_maker <- reactive({
     req(input$poolFilePicker)
-    cat("model_maker\n")
+    
     sport <- input$sportChoices
     site <- input$siteChoices
     
@@ -156,7 +154,6 @@ server <- function(input, output) {
   # build model
   model <- reactive({
     req(pool, model_maker)
-    cat("model\n")
 
     p <- pool()
     m <- model_maker()
@@ -166,14 +163,13 @@ server <- function(input, output) {
   # optimization results
   results <- reactive({
     req(input$numLineups, pool, model)
-    cat("results\n")
+    
     optimize_generic(pool(), model(), L = input$numLineups, 
                      stack_sizes = c(input$stackSize1, input$stackSize2))
   })
   
   # combined lineups
   lineups <- reactive({
-    cat("lineups\n")
     r <- results()
     
     # normalize lineups
@@ -187,7 +183,6 @@ server <- function(input, output) {
   })
   
   lineup_size <- reactive({
-    cat("lineup_size\n")
     r <- results()
     nrow(r[[1]])
   })
@@ -250,8 +245,6 @@ server <- function(input, output) {
       sprintf("coach-%s-%s-%s.csv", site, sport, now)
       },
     content = function(file) {
-      cat(file, "\n")
-      #file.copy("data/coach-template.csv", file)
       coach::write_lineups(lineups(), file)
     },
     contentType = "text/csv"
