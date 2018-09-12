@@ -44,7 +44,15 @@ tabOptimize <- function(input, output, session, pool, model,
   results <- reactive({
     req(input$numLineups, pool, model)
     
-    optimize_generic(pool(), model(), L = input$numLineups, 
+    # check pool before building model
+    p <- pool()
+    m <- model()
+
+    validate(
+      need(all(!is.na(p[["fpts_proj"]])), message = "fpts_proj can't be empty or contain NAs")
+    )
+    
+    optimize_generic(p, m, L = input$numLineups, 
                      stack_sizes = c(input$stackSize1, input$stackSize2))
   })
   
