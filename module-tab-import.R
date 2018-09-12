@@ -54,9 +54,6 @@ tabImport <- function(input, output, session) {
     
     # Read data
     df <- reader(file_meta$datapath)
-    
-    # Add random projections
-    df$fpts_proj <- rnorm(nrow(df), df$fpts_avg, 4)
     df
   })
   
