@@ -8,6 +8,7 @@ source("modules/title.R")
 source("modules/tab-import.R")
 source("modules/tab-optimize.R")
 source("modules/tab-export.R")
+source("modules/tab-instructions.R")
 
 # Define UI for application 
 ui <- fluidPage(
@@ -22,7 +23,8 @@ ui <- fluidPage(
   tabsetPanel(
     tabImportUI("import"),
     tabOptimizeUI("optimize"),
-    tabExportUI("export")
+    tabExportUI("export"),
+    tabInstructionsUI("instructions")
   )
 )
 
