@@ -74,6 +74,7 @@ tabImport <- function(input, output, session) {
       if (sport == "NFL") coach::model_dk_nfl
       else if (sport == "MLB") coach::model_dk_mlb
       else if (sport == "NBA") coach::model_dk_nba
+      else if (sport == "NHL") coach::model_dk_nhl
       else NULL
     }
   })
