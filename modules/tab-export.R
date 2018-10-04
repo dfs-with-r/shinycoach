@@ -24,9 +24,12 @@ tabExportUI <- function(id) {
 tabExport <- function(input, output, session, lineups, 
                       siteChoices, sportChoices) {
   
+  site <- reactive(tolower(siteChoices()))
+  sport <- reactive(tolower(sportChoices()))
+  
   # Exportable Lineups Output
   output$exportableTable <- DT::renderDataTable({
-    to_export <- coach::write_lineups(lineups())
+    to_export <- coach::write_lineups(lineups(), site = site(), sport = sport())
     DT::datatable(
       to_export, 
       options = list(pageLength = 20, lengthChange = FALSE, searching = FALSE),
@@ -37,13 +40,11 @@ tabExport <- function(input, output, session, lineups,
   # download lineups
   output$downloadLineups <- downloadHandler(
     filename = function() {
-      site <- tolower(siteChoices())
-      sport <- tolower(sportChoices())
       now <- format(Sys.time(), "%Y%m%d-%H%M%S")
-      sprintf("coach-%s-%s-%s.csv", site, sport, now)
+      sprintf("coach-%s-%s-%s.csv", site(), sport(), now)
     },
     content = function(file) {
-      coach::write_lineups(lineups(), file)
+      coach::write_lineups(lineups(), file, site = site(), sport = sport())
     },
     contentType = "text/csv"
   )
