@@ -19,10 +19,14 @@ tabOptimizeUI <- function(id) {
         ),
         
         # Panel: Stacking
-        wellPanel(
-          # Input: Stack Sizes
-          sliderInput(ns("stackSize1"), "Stack Size 1:", 1, 4, 1, step = 1, round = TRUE),
-          sliderInput(ns("stackSize2"), "Stack Size 2:", 1, 4, 1, step = 1, round = TRUE)
+        conditionalPanel(
+          condition = "output.is_team_sport",
+          ns = ns,
+          wellPanel(
+            # Input: Stack Sizes
+            sliderInput(ns("stackSize1"), "Stack Size 1:", 1, 4, 1, step = 1, round = TRUE),
+            sliderInput(ns("stackSize2"), "Stack Size 2:", 1, 4, 1, step = 1, round = TRUE)
+          )
         )
         ),
       
@@ -40,6 +44,14 @@ tabOptimizeUI <- function(id) {
 
 tabOptimize <- function(input, output, session, pool, model,
                         siteChoices, sportChoices) {
+
+  # reender module input to a fake output reactive
+  # this is used to determine whether or not to show stacking input panel
+  output$is_team_sport <- reactive({
+    sportChoices() != "NASCAR"
+    })
+  outputOptions(output, "is_team_sport", suspendWhenHidden = FALSE)
+  
   # optimization results
   results <- reactive({
     req(input$numLineups, pool, model)
@@ -51,9 +63,15 @@ tabOptimize <- function(input, output, session, pool, model,
     validate(
       need(all(!is.na(p[["fpts_proj"]])), message = "fpts_proj can't be empty or contain NAs")
     )
+
+    if (sportChoices() != "NASCAR") {
+      optimize_generic(p, m, L = input$numLineups, 
+                       stack_sizes = c(input$stackSize1, input$stackSize2))
+    } else {
+      # no stacking in nascar
+      optimize_generic(p, m, L = input$numLineups)
+    }
     
-    optimize_generic(p, m, L = input$numLineups, 
-                     stack_sizes = c(input$stackSize1, input$stackSize2))
   })
   
   # combined lineups
