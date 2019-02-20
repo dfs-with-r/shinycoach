@@ -27,9 +27,14 @@ tabExport <- function(input, output, session, lineups,
   site <- reactive(tolower(siteChoices()))
   sport <- reactive(tolower(sportChoices()))
   
+  split_lineups <- reactive({
+    x <- lineups()
+    split(x, x$lineup)
+  })
+  
   # Exportable Lineups Output
   output$exportableTable <- DT::renderDataTable({
-    to_export <- coach::write_lineups(lineups(), site = site(), sport = sport())
+    to_export <- coach::write_lineups(split_lineups(), site = site(), sport = sport())
     DT::datatable(
       to_export, 
       options = list(pageLength = 20, lengthChange = FALSE, searching = FALSE),
@@ -44,7 +49,7 @@ tabExport <- function(input, output, session, lineups,
       sprintf("coach-%s-%s-%s.csv", site(), sport(), now)
     },
     content = function(file) {
-      coach::write_lineups(lineups(), file, site = site(), sport = sport())
+      coach::write_lineups(split_lineups(), path = file, site = site(), sport = sport())
     },
     contentType = "text/csv"
   )
