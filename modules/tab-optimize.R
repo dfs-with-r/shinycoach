@@ -48,7 +48,7 @@ tabOptimize <- function(input, output, session, pool, model,
   # reender module input to a fake output reactive
   # this is used to determine whether or not to show stacking input panel
   output$is_team_sport <- reactive({
-    sportChoices() != "NASCAR"
+    !(sportChoices() %in% c("NASCAR", "PGA"))
     })
   outputOptions(output, "is_team_sport", suspendWhenHidden = FALSE)
   
@@ -64,11 +64,11 @@ tabOptimize <- function(input, output, session, pool, model,
       need(all(!is.na(p[["fpts_proj"]])), message = "fpts_proj can't be empty or contain NAs")
     )
 
-    if (sportChoices() != "NASCAR") {
+    if (!(sportChoices() %in% c("NASCAR", "PGA"))) {
       optimize_generic(p, m, L = input$numLineups, 
                        stack_sizes = c(input$stackSize1, input$stackSize2))
     } else {
-      # no stacking in nascar
+      # no stacking in nascar or golf
       optimize_generic(p, m, L = input$numLineups)
     }
     

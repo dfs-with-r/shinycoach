@@ -14,7 +14,7 @@ tabImportUI <- function(id) {
           p(" Select the type of optimization model to build. This defines the
               available positions, salary cap, and any other constraints."),
           radioButtons(ns("siteChoices"), "Site:", c("Fanduel", "Draftkings")),
-          radioButtons(ns("sportChoices"), "Sport:", c("NFL", "NBA", "MLB", "NHL", "NASCAR"))
+          radioButtons(ns("sportChoices"), "Sport:", c("NFL", "NBA", "MLB", "NHL", "NASCAR", "PGA"))
         ),
         
         # Panel: Upload Site Player Pool
@@ -70,6 +70,7 @@ tabImport <- function(input, output, session) {
       else if (sport == "NBA") coach::model_fd_nba
       else if (sport == "NHL") coach::model_fd_nhl
       else if (sport == "NASCAR") coach::model_fd_nascar
+      else if (sport == "PGA") coach::model_fd_pga
       else NULL
     } else if (site == "Draftkings") {
       if (sport == "NFL") coach::model_dk_nfl
@@ -77,6 +78,7 @@ tabImport <- function(input, output, session) {
       else if (sport == "NBA") coach::model_dk_nba
       else if (sport == "NHL") coach::model_dk_nhl
       else if (sport == "NASCAR") coach::model_dk_nascar
+      else if (sport == "PGA") coach::model_dk_pga
       else NULL
     }
   })
